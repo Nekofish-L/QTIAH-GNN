@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
-from .topology_agnostic_embedding_layer import feature_emb_layer as feature_emb_layer
+
 from .neighbor_selection_layer import semantic_layer as semantic_layer
+from .topology_agnostic_embedding_layer import feature_emb_layer as feature_emb_layer
+
 
 class semantic_gnn(nn.Module):
     def __init__(self,
@@ -36,8 +38,10 @@ class semantic_gnn(nn.Module):
         self.layers = nn.ModuleList()
 
         if self.num_layers == 1:
-            self.layers.append(semantic_layer(self.in_dim, self.out_dim, self.num_classes, self.num_head,self.g,self.device, activation=self.activation,
-                                              step_size=self.step_size))
+            self.layers.append(
+                semantic_layer(self.in_dim, self.out_dim, self.num_classes, self.num_head, self.g, self.device,
+                               activation=self.activation,
+                               step_size=self.step_size))
 
         else:
             self.layers.append(
@@ -45,17 +49,18 @@ class semantic_gnn(nn.Module):
                                activation=self.activation,
                                step_size=self.step_size))
 
-            for i in range(self.num_layers-2):
-                self.layers.append(semantic_layer(self.hid_dim, self.hid_dim, self.num_classes, self.num_head, self.g, self.device,
-                               activation=self.activation,
-                               step_size=self.step_size))
+            for i in range(self.num_layers - 2):
+                self.layers.append(
+                    semantic_layer(self.hid_dim, self.hid_dim, self.num_classes, self.num_head, self.g, self.device,
+                                   activation=self.activation,
+                                   step_size=self.step_size))
 
             self.layers.append(
                 semantic_layer(self.hid_dim, self.hid_dim, self.num_classes, self.num_head, self.g, self.device,
                                activation=self.activation,
                                step_size=self.step_size))
 
-        self.MLP = nn.Sequential(nn.Linear(self.hid_dim+self.num_layers*self.in_dim, 20),
+        self.MLP = nn.Sequential(nn.Linear(self.hid_dim + self.num_layers * self.in_dim, 20),
                                  nn.Linear(20, 10),
                                  nn.Sigmoid(),
                                  nn.Linear(10, 2),
