@@ -1,10 +1,11 @@
-import torch
-import torch.nn as nn
+import random
+from itertools import chain
+
 import dgl.function as fn
 import numpy as np
+import torch
+import torch.nn as nn
 from tqdm import tqdm
-from itertools import chain
-import random
 
 etype_map = dict(
     company=[
@@ -28,8 +29,9 @@ etype_map = dict(
 
 RW = False
 
+
 class Hadamard_product_layer(nn.Module):
-    def __init__(self, num_nodes, in_dim, device,num_head=2):
+    def __init__(self, num_nodes, in_dim, device, num_head=2):
         super(Hadamard_product_layer, self).__init__()
         self.num_head = num_head
         self.weight_head = []
@@ -43,7 +45,6 @@ class Hadamard_product_layer(nn.Module):
     def forward(self, input):
         res = []
         for i in range(self.num_head):
-
             res.append(torch.mul(self.weight_head[i], input))
 
         return torch.mean(torch.stack(res), dim=0)
@@ -51,7 +52,7 @@ class Hadamard_product_layer(nn.Module):
 
 class semantic_layer(nn.Module):
     # one layer of semantic_graph
-    def __init__(self, in_dim, out_dim, num_class,num_head,g,device, activation=None, step_size=0.02):
+    def __init__(self, in_dim, out_dim, num_class, num_head, g, device, activation=None, step_size=0.02):
         super(semantic_layer, self).__init__()
 
         self.activation = activation
@@ -62,13 +63,13 @@ class semantic_layer(nn.Module):
 
         self.device = device
 
-        self.linear_company = nn.Linear(self.in_dim*2, self.out_dim)
+        self.linear_company = nn.Linear(self.in_dim * 2, self.out_dim)
         self.linear_brand = nn.Linear(self.in_dim, self.out_dim)
         self.linear_organize = nn.Linear(self.in_dim, self.out_dim)
 
         self.cos_sim = nn.CosineSimilarity(dim=1)
         self.Hadamard_layer = Hadamard_product_layer(
-            g.num_nodes(), in_dim,device=self.device, num_head=num_head)
+            g.num_nodes(), in_dim, device=self.device, num_head=num_head)
         self.Hadamard_layer_list = nn.ModuleList()
         self.tmask = (g.nodes['company'].data['y']
                       == 1).nonzero(as_tuple=True)[0]
@@ -209,7 +210,8 @@ class semantic_layer(nn.Module):
                 etype, tgt_node = random.choice(neighbors)
                 return tgt_node, etype, etype[-1]
 
-            def random_walk_per_node(g, node, max_length=8, max_same_comp_neighbor=15, max_sample_path=20,restart_prob = 0.1):
+            def random_walk_per_node(g, node, max_length=8, max_same_comp_neighbor=15, max_sample_path=20,
+                                     restart_prob=0.1):
                 counter, sample_path = 0, 0
                 result = set()
                 order_1_num = len(filtered_neighbor(g, node, "company"))
@@ -220,9 +222,10 @@ class semantic_layer(nn.Module):
                 while counter < max_same_comp_neighbor and sample_path < max_sample_path:
                     depth, company_in_a_path = 1, 0
                     current_node, current_ntype = node, "company"
-                    while (depth < max_length) and (current_node is not None) and (counter + company_in_a_path < max_same_comp_neighbor):
+                    while (depth < max_length) and (current_node is not None) and (
+                            counter + company_in_a_path < max_same_comp_neighbor):
                         # sample a random neighbor with same pseudo label
-                        if restart_prob is not None and random.random() <=restart_prob:
+                        if restart_prob is not None and random.random() <= restart_prob:
                             depth, company_in_a_path = 1, 0
                             current_node, current_etype, current_ntype = sample_next(
                                 g, node, 'company'
@@ -233,7 +236,7 @@ class semantic_layer(nn.Module):
                         if current_node is None:
                             break
                         _, relation, current_ntype = current_etype
-                        if current_ntype == "company": # and ((node, current_node), current_etype) not in result:
+                        if current_ntype == "company":  # and ((node, current_node), current_etype) not in result:
                             company_in_a_path += 1
                             if relation not in ['business', 'competition', 'invest', 'member', 'shareholder']:
                                 relation = 'business'
@@ -287,11 +290,9 @@ class semantic_layer(nn.Module):
                     else:
                         continue
 
-
             hr_company_tensor_nei = torch.mean(
                 torch.stack(list(hr_company.values())), dim=0)
-            hr_company_tensor = torch.cat([sem_feat['company'],hr_company_tensor_nei],dim=1)
-
+            hr_company_tensor = torch.cat([sem_feat['company'], hr_company_tensor_nei], dim=1)
 
             if len(hr_organize) == 0:
                 hr_organize_tensor = sem_feat['organize']
@@ -313,7 +314,6 @@ class semantic_layer(nn.Module):
 
             if RW:
                 for (start, end), etype in extra_edges:
-
                     g.remove_edges(g[etype].edge_ids(
                         [start, ], [end, ]), etype=etype)
 

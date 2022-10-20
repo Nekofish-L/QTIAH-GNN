@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 
+
 class feature_emb_layer(nn.Module):
-    def __init__(self, node_in_feats_dims, category_feat_indices=None, category_feat_nums=None, node_types=[], emb_dim=20):
+    def __init__(self, node_in_feats_dims, category_feat_indices=None, category_feat_nums=None, node_types=[],
+                 emb_dim=20):
         super(feature_emb_layer, self).__init__()
         self.node_types = node_types
         self.category_feat_nums = category_feat_nums
@@ -36,11 +38,11 @@ class feature_emb_layer(nn.Module):
         inputs_nn_emb = {}
         for node_type in self.node_types:
             inputs_temp = inputs[node_type][:,
-                                            self.num_feat_indices[node_type]]
+                          self.num_feat_indices[node_type]]
             inputs_nn_emb[node_type] = []
             for i, nn_emb in enumerate(self.nn_emb_dict[node_type]):
                 category = inputs[node_type][:,
-                                             self.category_feat_indices[node_type][i]].int()
+                           self.category_feat_indices[node_type][i]].int()
                 # if category.min()<0:
                 #     category[category<0] = self.category_feat_nums[node_type][i]-1
                 category_emb = nn_emb(category)

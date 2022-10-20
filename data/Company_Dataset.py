@@ -1,7 +1,8 @@
-import torch
 import numpy as np
+import torch
 from dgl.data import DGLDataset
 from sklearn.model_selection import train_test_split
+
 
 class CompanyDataset(DGLDataset):
     def __init__(self, heter_g):
@@ -15,7 +16,6 @@ class CompanyDataset(DGLDataset):
         l = np.array(range(n_nodes))
         train, val_test = train_test_split(l, train_size=0.6)
         val, test = train_test_split(val_test, train_size=0.5)
-
 
         train_mask = torch.zeros(n_nodes, dtype=torch.bool)
         val_mask = torch.zeros(n_nodes, dtype=torch.bool)
