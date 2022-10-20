@@ -63,4 +63,4 @@ def train(g, model, features, num_epoch, learning_rate, loss_f, device, beta, et
 
     test_b_acc = balanced_accuracy_score(labels[test_mask], pred_best[test_mask])
 
-    print('test: auc:{.3f}, recall:{:.3f}, bacc:{:.3f}'.format(test_auc, test_recall, test_b_acc))
+    print('test: auc:{:.3f}, recall:{:.3f}, bacc:{:.3f}'.format(test_auc, test_recall, test_b_acc))
