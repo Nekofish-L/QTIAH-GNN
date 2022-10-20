@@ -26,7 +26,7 @@ etype_map = dict(
     ]
 )
 
-RW = True
+RW = False
 
 class Hadamard_product_layer(nn.Module):
     def __init__(self, num_nodes, in_dim, device,num_head=2):
@@ -87,7 +87,13 @@ class semantic_layer(nn.Module):
 
     def cal_sam_neigh(self, edges):
         d = edges.src['pred_label'] == edges.dst['pred_label']
-        # print("edges", d.shape)
+
+        pred_prob = torch.max(edges.dst['pred_prob'], dim=1).values
+
+        threshold = 0.3
+        over_thd = pred_prob > threshold
+        d = torch.logical_and(d, over_thd)
+
         return {'d': d}
 
     def forward(self, g, sem_feat):
@@ -116,10 +122,13 @@ class semantic_layer(nn.Module):
 
             g.nodes['company'].data['pred_label'] = torch.argmax(
                 semantic[:, company_indices[0]:company_indices[1]], dim=0)
+            g.nodes['company'].data['pred_prob'] = semantic[:, company_indices[0]:company_indices[1]].transpose(1, 0)
             g.nodes['brand'].data['pred_label'] = torch.argmax(
                 semantic[:, brand_indices[0]:brand_indices[1]], dim=0)
+            g.nodes['brand'].data['pred_prob'] = semantic[:, brand_indices[0]:brand_indices[1]].transpose(1, 0)
             g.nodes['organize'].data['pred_label'] = torch.argmax(
                 semantic[:, organize_indices[0]:organize_indices[1]], dim=0)
+            g.nodes['organize'].data['pred_prob'] = semantic[:, organize_indices[0]:organize_indices[1]].transpose(1, 0)
 
             hr_company = {}
             hr_brand = {}
@@ -254,7 +263,7 @@ class semantic_layer(nn.Module):
             for i, etype in enumerate(g.canonical_etypes):
                 if etype[0] == 'company' or etype[2] == 'company':
                     g.apply_edges(self.cal_sam_neigh, etype=etype)
-                    # print("after apply", g[etype].edata['d'].shape)
+
                 else:
                     g.edges[etype].data['d'] = torch.ones(
                         g.num_edges(etype)).to(self.device)
@@ -271,24 +280,18 @@ class semantic_layer(nn.Module):
                     elif key == 'brand':
                         hr_brand[etype] = g.ndata['h_%s_%s_%s' %
                                                   (etype[0], etype[1], etype[2])]['brand']
-                        print(hr_brand[etype].shape, etype)
+
                     elif key == 'organize':
                         hr_organize[etype] = g.ndata['h_%s_%s_%s' %
                                                      (etype[0], etype[1], etype[2])]['organize']
                     else:
                         continue
 
-            # hr_company_tensor = torch.sum(torch.stack(list(hr_company.values())),dim=0) # 没有加中心节点的特征
-            # hr_company_tensor = torch.sum(torch.stack(list(hr_company.values())),dim=0) + sem_feat['company']  # 加了中心节点特征
-            #####################
 
-            hr_company_tensor_nei = torch.sum(
+            hr_company_tensor_nei = torch.mean(
                 torch.stack(list(hr_company.values())), dim=0)
-            hr_company_tensor_diff = torch.sum(torch.stack(
-                list(hr_company.values())) - sem_feat['company'], dim=0)
-            hr_company_tensor = torch.cat(
-                [hr_company_tensor_nei, hr_company_tensor_diff], dim=1)
-            ######################
+            hr_company_tensor = torch.cat([sem_feat['company'],hr_company_tensor_nei],dim=1)
+
 
             if len(hr_organize) == 0:
                 hr_organize_tensor = sem_feat['organize']
@@ -299,8 +302,6 @@ class semantic_layer(nn.Module):
             if len(hr_brand) == 0:
                 hr_brand_tensor = sem_feat['brand']
             else:
-                print(sem_feat['brand'].shape)
-                print([t.shape for t in hr_brand.values()])
                 hr_brand_tensor = torch.sum(torch.stack(
                     list(hr_brand.values())), dim=0) + sem_feat['brand']
 
@@ -310,7 +311,6 @@ class semantic_layer(nn.Module):
             organize_tensor = self.activation(
                 self.linear_organize(hr_organize_tensor))
 
-            # print("remove temp edge")
             if RW:
                 for (start, end), etype in extra_edges:
 

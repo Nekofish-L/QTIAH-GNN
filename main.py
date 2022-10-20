@@ -63,7 +63,7 @@ def main():
     num_head = 5
     num_layers = 2
     step_size = 0.02
-    RW = False
+
 
     node_types = ['company','brand','organize']
 
@@ -90,6 +90,7 @@ def main():
                          category_feat_indices = category_feat_indices,
                          category_feat_nums=category_feat_nums,
                          node_types = node_types)
+
     train(h_g, model, features, num_epoch, lr, CBLoss, device, beta, eta_min)
 
 if __name__ == '__main__':
